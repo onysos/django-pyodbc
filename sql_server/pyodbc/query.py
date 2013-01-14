@@ -263,7 +263,7 @@ def query_class(QueryClass):
                     result.append('AND')
                 result.append(' AND '.join(self.extra_where))
 
-            grouping, gb_params = self.get_grouping()
+            grouping, gb_params = self.get_grouping(ordering_group_by)
             if grouping:
                 if ordering:
                     # If the backend can't group by PK (i.e., any database

@@ -21,7 +21,9 @@ from django.db.backends import BaseDatabaseWrapper, BaseDatabaseFeatures, BaseDa
 from django.db.backends.signals import connection_created
 from django.conf import settings
 from django import VERSION as DjangoVersion
-if DjangoVersion[:2] == (1,4):
+if DjangoVersion[:2] == (1,5):
+    _DJANGO_VERSION = 15
+elif DjangoVersion[:2] == (1,4):
     # Django version 1.4 adds a backwards incompatible change to
     # DatabaseOperations
     _DJANGO_VERSION = 14
