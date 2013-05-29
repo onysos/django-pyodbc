@@ -1,5 +1,6 @@
 from django.db.models.sql import compiler
 from datetime import datetime
+import re
 
 REV_ODIR = {
     'ASC': 'DESC',
@@ -27,13 +28,13 @@ WHERE %(key)s NOT IN (
 )"""
 
 # Strategies for handling limit+offset emulation:
-USE_ROW_NUMBER = 0 # For SQL Server >= 2005
-USE_TOP_HMARK = 1 # For SQL Server 2000 when both limit and offset are provided
-USE_TOP_LMARK = 2 # For SQL Server 2000 when offset but no limit is provided
+USE_ROW_NUMBER = 0  # For SQL Server >= 2005
+USE_TOP_HMARK = 1  # For SQL Server 2000 when both limit and offset are provided
+USE_TOP_LMARK = 2  # For SQL Server 2000 when offset but no limit is provided
 
 
 class SQLCompiler(compiler.SQLCompiler):
-    
+
     def resolve_columns(self, row, fields=()):
         index_start = len(self.query.extra_select.keys())
         values = [self.query.convert_values(v, None, connection=self.connection) for v in row[:index_start]]
@@ -61,7 +62,7 @@ class SQLCompiler(compiler.SQLCompiler):
                 if col not in self.query.ordering_aliases and col.strip('[]') not in extra_select_aliases:
                     if col.isdigit():
                         cnt += 1
-                        n = int(col)-1
+                        n = int(col) - 1
                         alias = 'OrdAlias%d' % cnt
                         out_cols[n] = '%s AS [%s]' % (out_cols[n], alias)
                         self._ord.append((alias, odir))
@@ -89,10 +90,10 @@ class SQLCompiler(compiler.SQLCompiler):
                     self._ord.append((col, odir))
 
         if strategy == USE_ROW_NUMBER and not self._ord and 'RAND()' in ordering:
-            self._ord.append(('RAND()',''))
+            self._ord.append(('RAND()', ''))
         if strategy == USE_TOP_HMARK and not self._ord:
             # XXX:
-            #meta = self.get_meta()
+            # meta = self.get_meta()
             meta = self.query.model._meta
             qn = self.quote_name_unless_alias
             pk_col = '%s.%s' % (qn(meta.db_table), qn(meta.pk.db_column or meta.pk.column))
@@ -115,13 +116,13 @@ class SQLCompiler(compiler.SQLCompiler):
             if not ordering:
                 meta = self.query.get_meta()
                 qn = self.quote_name_unless_alias
-                # Special case: pk not in out_cols, use random ordering. 
+                # Special case: pk not in out_cols, use random ordering.
                 #
                 if '%s.%s' % (qn(meta.db_table), qn(meta.pk.db_column or meta.pk.column)) not in self.get_columns():
                     ordering = ['RAND()']
                     # XXX: Maybe use group_by field for ordering?
-                    #if self.group_by:
-                        #ordering = ['%s.%s ASC' % (qn(self.group_by[0][0]),qn(self.group_by[0][1]))]
+                    # if self.group_by:
+                        # ordering = ['%s.%s ASC' % (qn(self.group_by[0][0]),qn(self.group_by[0][1]))]
                 else:
                     ordering = ['%s.%s ASC' % (qn(meta.db_table), qn(meta.pk.db_column or meta.pk.column))]
 
@@ -129,8 +130,10 @@ class SQLCompiler(compiler.SQLCompiler):
             self.modify_query(strategy, ordering, out_cols)
 
         if strategy == USE_ROW_NUMBER:
-            ord = ', '.join(['%s %s' % pair for pair in self._ord])
-            self.query.ordering_aliases.append('(ROW_NUMBER() OVER (ORDER BY %s)) AS [rn]' % ord)
+            def change_table(pattern):
+                return "[Y]." + pattern.split(".")[1]
+            ord = ', '.join(['%s %s' % (change_table(pair[0]), pair[1]) for pair in self._ord])
+            self.query.ordering_rownumber = '(ROW_NUMBER() OVER (ORDER BY %s)) AS [rn]' % ord
 
         # This must come after 'select' and 'ordering' -- see docstring of
         # get_from_clause() for details.
@@ -149,7 +152,7 @@ class SQLCompiler(compiler.SQLCompiler):
 
         if strategy == USE_TOP_LMARK:
             # XXX:
-            #meta = self.get_meta()
+            # meta = self.get_meta()
             meta = self.query.model._meta
             result.append('TOP %s %s' % (self.query.low_mark, self.quote_name_unless_alias(meta.pk.db_column or meta.pk.column)))
         else:
@@ -210,7 +213,7 @@ class SQLCompiler(compiler.SQLCompiler):
 
         self.pre_sql_setup()
         # XXX:
-        #meta = self.get_meta()
+        # meta = self.get_meta()
         meta = self.query.model._meta
         qn = self.quote_name_unless_alias
         fallback_ordering = '%s.%s' % (qn(meta.db_table), qn(meta.pk.db_column or meta.pk.column))
@@ -241,15 +244,16 @@ class SQLCompiler(compiler.SQLCompiler):
         # SQL Server 2005
         if self.connection.ops.sql_server_ver >= 2005:
             sql, params = self._as_sql(USE_ROW_NUMBER)
-            
+
             # Construct the final SQL clause, using the initial select SQL
             # obtained above.
-            result = ['SELECT * FROM (%s) AS X' % sql]
+
+            result = ['SELECT * FROM (select Y.*,%s  FROM (%s) as Y) AS X' % (self.query.ordering_rownumber, sql)]
 
             # Place WHERE condition on `rn` for the desired range.
             if self.query.high_mark is None:
                 self.query.high_mark = 9223372036854775807
-            result.append('WHERE X.rn BETWEEN %d AND %d' % (self.query.low_mark+1, self.query.high_mark))
+            result.append('WHERE X.rn BETWEEN %d AND %d' % (self.query.low_mark + 1, self.query.high_mark))
 
             return ' '.join(result), params
 

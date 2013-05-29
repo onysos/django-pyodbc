@@ -1,6 +1,6 @@
 from django.db.backends.creation import BaseDatabaseCreation
 import base64
-from django.utils.hashcompat import md5_constructor
+from hashlib import md5 as  md5_constructor
 import random
 
 class DataTypesWrapper(dict):
@@ -24,7 +24,7 @@ class DatabaseCreation(BaseDatabaseCreation):
     # output (the "qn_" prefix is stripped before the lookup is performed.
 
     data_types = DataTypesWrapper({
-    #data_types = {
+    # data_types = {
         'AutoField':         'int IDENTITY (1, 1)',
         'BooleanField':      'bit',
         'CharField':         'nvarchar(%(max_length)s)',
@@ -39,20 +39,20 @@ class DatabaseCreation(BaseDatabaseCreation):
         'IPAddressField':    'nvarchar(15)',
         'NullBooleanField':  'bit',
         'OneToOneField':     'int',
-        #'PositiveIntegerField': 'integer CONSTRAINT [CK_int_pos_%(column)s] CHECK ([%(column)s] >= 0)',
-        #'PositiveSmallIntegerField': 'smallint CONSTRAINT [CK_smallint_pos_%(column)s] CHECK ([%(column)s] >= 0)',
+        # 'PositiveIntegerField': 'integer CONSTRAINT [CK_int_pos_%(column)s] CHECK ([%(column)s] >= 0)',
+        # 'PositiveSmallIntegerField': 'smallint CONSTRAINT [CK_smallint_pos_%(column)s] CHECK ([%(column)s] >= 0)',
         'SlugField':         'nvarchar(%(max_length)s)',
         'SmallIntegerField': 'smallint',
         'TextField':         'nvarchar(max)',
         'TimeField':         'datetime',
-    #}
+    # }
     })
 
     def _destroy_test_db(self, test_database_name, verbosity):
         "Internal implementation - remove the test db tables."
         cursor = self.connection.cursor()
         self.set_autocommit()
-        #time.sleep(1) # To avoid "database is being accessed by other users" errors.
+        # time.sleep(1) # To avoid "database is being accessed by other users" errors.
         cursor.execute("ALTER DATABASE %s SET SINGLE_USER WITH ROLLBACK IMMEDIATE " % \
                 self.connection.ops.quote_name(test_database_name))
         cursor.execute("DROP DATABASE %s" % \
