@@ -131,7 +131,11 @@ class SQLCompiler(compiler.SQLCompiler):
 
         if strategy == USE_ROW_NUMBER:
             def change_table(pattern):
-                return "[Y]." + pattern.split(".")[1]
+                splited = pattern.split(".")
+                if len(splited) == 2:
+                    return "[Y]." + splited[1]
+                else:
+                    return pattern
             ord = ', '.join(['%s %s' % (change_table(pair[0]), pair[1]) for pair in self._ord])
             self.query.ordering_rownumber = '(ROW_NUMBER() OVER (ORDER BY %s)) AS [rn]' % ord
 
