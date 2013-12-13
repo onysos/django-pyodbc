@@ -266,7 +266,6 @@ class DatabaseWrapper(BaseDatabaseWrapper):
             # to avoid this
 
             if self.drv_name.startswith('LIBTDSODBC'):
-                self.driver_needs_utf8 = False
                 if not self.connection.autocommit:
                     self.connection.commit()
 
@@ -300,20 +299,7 @@ class CursorWrapper(object):
     def format_params(self, params):
         fp = []
         for p in params:
-            if isinstance(p, unicode):
-                if self.driver_needs_utf8:
-                    # FreeTDS (and other ODBC drivers?) doesn't support Unicode
-                    # yet, so we need to encode parameters in utf-8
-                    fp.append(p.encode('utf-8'))
-                else:
-                    fp.append(p)
-            elif isinstance(p, str):
-                if self.driver_needs_utf8:
-                    # TODO: use system encoding when calling decode()?
-                    fp.append(p.decode('utf-8').encode('utf-8'))
-                else:
-                    fp.append(p)
-            elif isinstance(p, type(True)):
+            if isinstance(p, type(True)):
                 if p:
                     fp.append(1)
                 else:
