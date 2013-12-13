@@ -264,8 +264,11 @@ class DatabaseWrapper(BaseDatabaseWrapper):
             # FreeTDS can't execute some sql queries like CREATE DATABASE etc.
             # in multi-statement, so we need to commit the above SQL sentence(s)
             # to avoid this
-            if self.drv_name.startswith('LIBTDSODBC') and not self.connection.autocommit:
-                self.connection.commit()
+
+            if self.drv_name.startswith('LIBTDSODBC'):
+                self.driver_needs_utf8 = False
+                if not self.connection.autocommit:
+                    self.connection.commit()
 
         return CursorWrapper(cursor, self.driver_needs_utf8)
 
