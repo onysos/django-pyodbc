@@ -57,7 +57,7 @@ class DatabaseOperations(BaseDatabaseOperations):
         if lookup_type == 'day':
             return "Convert(datetime, Convert(varchar(12), %s, 112))" % field_name
 
-    def field_cast_sql(self, db_type):
+    def field_cast_sql(self, db_type, internal_type):
         """
         Given a column type (e.g. 'BLOB', 'VARCHAR'), returns the SQL necessary
         to cast it before using it in a WHERE statement. Note that the
@@ -131,7 +131,7 @@ class DatabaseOperations(BaseDatabaseOperations):
         not quote the given name if it's already been quoted.
         """
         if name.startswith('[') and name.endswith(']'):
-            return name # Quoting once is enough.
+            return name  # Quoting once is enough.
         return '[%s]' % name
 
     def random_function_sql(self):
@@ -152,7 +152,7 @@ class DatabaseOperations(BaseDatabaseOperations):
         """
         return super(DatabaseOperations, self).last_executed_query(cursor, cursor.last_sql, cursor.last_params)
 
-    #def savepoint_create_sql(self, sid):
+    # def savepoint_create_sql(self, sid):
     #    """
     #    Returns the SQL for starting a new savepoint. Only required if the
     #    "uses_savepoints" feature is True. The "sid" parameter is a string
@@ -160,13 +160,13 @@ class DatabaseOperations(BaseDatabaseOperations):
     #    """
     #    return "SAVE TRANSACTION %s" % sid
 
-    #def savepoint_commit_sql(self, sid):
+    # def savepoint_commit_sql(self, sid):
     #    """
     #    Returns the SQL for committing the given savepoint.
     #    """
     #    return "COMMIT TRANSACTION %s" % sid
 
-    #def savepoint_rollback_sql(self, sid):
+    # def savepoint_rollback_sql(self, sid):
     #    """
     #    Returns the SQL for rolling back the given savepoint.
     #    """
@@ -204,7 +204,7 @@ class DatabaseOperations(BaseDatabaseOperations):
             sql_list = ['ALTER TABLE %s NOCHECK CONSTRAINT %s;' % \
                     (self.quote_name(fk[0]), self.quote_name(fk[1])) for fk in fks]
             sql_list.extend(['%s %s %s;' % (style.SQL_KEYWORD('DELETE'), style.SQL_KEYWORD('FROM'),
-                             style.SQL_FIELD(self.quote_name(table)) ) for table in tables])
+                             style.SQL_FIELD(self.quote_name(table))) for table in tables])
             # Then reset the counters on each table.
             sql_list.extend(['%s %s (%s, %s, %s) %s %s;' % (
                 style.SQL_KEYWORD('DBCC'),
@@ -221,7 +221,7 @@ class DatabaseOperations(BaseDatabaseOperations):
         else:
             return []
 
-    #def sequence_reset_sql(self, style, model_list):
+    # def sequence_reset_sql(self, style, model_list):
     #    """
     #    Returns a list of the SQL statements required to reset sequences for
     #    the given models.
@@ -327,9 +327,9 @@ class DatabaseOperations(BaseDatabaseOperations):
         if field and field.get_internal_type() == 'DateTimeField':
             return value
         elif field and field.get_internal_type() == 'DateField':
-            value = value.date() # extract date
+            value = value.date()  # extract date
         elif field and field.get_internal_type() == 'TimeField' or (isinstance(value, datetime.datetime) and value.year == 1900 and value.month == value.day == 1):
-            value = value.time() # extract time
+            value = value.time()  # extract time
         # Some cases (for example when select_related() is used) aren't
         # caught by the DateField case above and date fields arrive from
         # the DB as datetime instances.
@@ -344,4 +344,4 @@ class DatabaseOperations(BaseDatabaseOperations):
         elif value is not None and field and field.get_internal_type() == 'FloatField':
             value = float(value)
         return value
-        
+
