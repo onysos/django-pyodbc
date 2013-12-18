@@ -23,13 +23,13 @@ from django.db.backends import BaseDatabaseWrapper, BaseDatabaseFeatures, BaseDa
 from django.db.backends.signals import connection_created
 from django.conf import settings
 from django import VERSION as DjangoVersion
-if DjangoVersion[:2] >= (1,5):
+if DjangoVersion[:2] >= (1, 5):
     _DJANGO_VERSION = 15
-elif DjangoVersion[:2] == (1,4):
+elif DjangoVersion[:2] == (1, 4):
     _DJANGO_VERSION = 14
-elif DjangoVersion[:2] == (1,3):
+elif DjangoVersion[:2] == (1, 3):
     _DJANGO_VERSION = 13
-elif DjangoVersion[:2] == (1,2):
+elif DjangoVersion[:2] == (1, 2):
     _DJANGO_VERSION = 12
 else:
     raise ImproperlyConfigured("Django %d.%d is not supported." % DjangoVersion[:2])
@@ -61,7 +61,7 @@ class DatabaseFeatures(BaseDatabaseFeatures):
     supports_subqueries_in_group_by = False
     supports_timezones = False
     supports_transactions = True
-    #uses_savepoints = True
+    # uses_savepoints = True
 
     def _supports_transactions(self):
         # keep it compatible with Django 1.3 and 1.4
@@ -88,7 +88,7 @@ class DatabaseWrapper(BaseDatabaseWrapper):
     vendor = 'microsoft'
     operators = {
         # Since '=' is used not only for string comparision there is no way
-        # to make it case (in)sensitive. 
+        # to make it case (in)sensitive.
         'exact': '= %s',
         'iexact': "= UPPER(%s)",
         'contains': "LIKE %s ESCAPE '\\'",
@@ -105,8 +105,8 @@ class DatabaseWrapper(BaseDatabaseWrapper):
         # TODO: remove, keep native T-SQL LIKE wildcards support
         # or use a "compatibility layer" and replace '*' with '%'
         # and '.' with '_'
-        #'regex': 'LIKE %s',
-        #'iregex': 'LIKE %s',
+        # 'regex': 'LIKE %s',
+        # 'iregex': 'LIKE %s',
 
         # TODO: freetext, full-text contains...
     }
@@ -125,7 +125,7 @@ class DatabaseWrapper(BaseDatabaseWrapper):
             self.MARS_Connection = options.get('MARS_Connection', False)
             self.datefirst = options.get('datefirst', 7)
             self.unicode_results = options.get('unicode_results', False)
-            
+
             # Some drivers need unicode encoded as UTF8. If this is left as
             # None, it will be determined based on the driver, namely it'll be
             # False if the driver is a windows driver and True otherwise.
@@ -152,6 +152,9 @@ class DatabaseWrapper(BaseDatabaseWrapper):
                     if sql.startswith('LIKE '):
                         ops[op] = '%s COLLATE %s' % (sql, self.collation)
                 self.operators.update(ops)
+
+            self.autocommit = options.get('autocommit', False)
+
 
         self.test_create = self.settings_dict.get('TEST_CREATE', True)
 
@@ -212,7 +215,7 @@ class DatabaseWrapper(BaseDatabaseWrapper):
             else:
                 # Only append DRIVER if DATABASE_ODBC_DSN hasn't been set
                 cstr_parts.append('DRIVER={%s}' % driver)
-                
+
                 if ms_drivers.match(driver) or driver == 'FreeTDS' and \
                         options.get('host_is_server', False):
                     if port_str:
@@ -233,12 +236,12 @@ class DatabaseWrapper(BaseDatabaseWrapper):
 
             if self.MARS_Connection:
                 cstr_parts.append('MARS_Connection=yes')
-                
+
             if 'extra_params' in options:
                 cstr_parts.append(options['extra_params'])
 
             connstr = ';'.join(cstr_parts)
-            autocommit = options.get('autocommit', False)
+            autocommit = self.autocommit
             if self.unicode_results:
                 self.connection = Database.connect(connstr, \
                         autocommit=autocommit, \
@@ -292,6 +295,9 @@ class DatabaseWrapper(BaseDatabaseWrapper):
 
         return CursorWrapper(cursor, self)
 
+    def _set_autocommit(self, autocommit):
+        self.autocommit = autocommit
+
     def _execute_foreach(self, sql, table_names=None):
         cursor = self.cursor()
         if not table_names:
@@ -316,13 +322,13 @@ class DatabaseWrapper(BaseDatabaseWrapper):
 
     def disable_constraint_checking(self):
         # Windows Azure SQL Database doesn't support sp_msforeachtable
-        #cursor.execute('EXEC sp_msforeachtable "ALTER TABLE ? NOCHECK CONSTRAINT ALL"')
+        # cursor.execute('EXEC sp_msforeachtable "ALTER TABLE ? NOCHECK CONSTRAINT ALL"')
         self._execute_foreach('ALTER TABLE %s NOCHECK CONSTRAINT ALL')
         return True
 
     def enable_constraint_checking(self):
         # Windows Azure SQL Database doesn't support sp_msforeachtable
-        #cursor.execute('EXEC sp_msforeachtable "ALTER TABLE ? WITH CHECK CHECK CONSTRAINT ALL"')
+        # cursor.execute('EXEC sp_msforeachtable "ALTER TABLE ? WITH CHECK CHECK CONSTRAINT ALL"')
         self.check_constraints()
 
 class CursorWrapper(object):
