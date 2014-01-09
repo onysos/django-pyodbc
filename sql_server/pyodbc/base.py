@@ -366,7 +366,7 @@ class CursorWrapper(object):
     def format_params(self, params):
         fp = []
         for p in params:
-            if self.connection.drv_name in ("LIBTDSODBC.SO",):
+            if not self.connection.drv_name in ("LIBTDSODBC.SO",):
                 if isinstance(p, text_type):
                     if self.driver_needs_utf8:
                         # FreeTDS (and other ODBC drivers?) doesn't support Unicode
