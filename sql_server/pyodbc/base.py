@@ -276,10 +276,14 @@ class DatabaseWrapper(BaseDatabaseWrapper):
                 self.features.supports_mixed_date_datetime_comparisons = True
 
             ms_drv_names = re.compile('^((LIB)?SQLN?CLI|LIBMSODBCSQL)')
+
             if self.driver_needs_utf8 is None:
                 self.driver_needs_utf8 = False
-                if self.drv_name == 'SQLSRV32.DLL' or ms_drv_names.match(self.drv_name):
+                if self.drv_name in('SQLSRV32.DLL',) or ms_drv_names.match(self.drv_name):
                     self.driver_needs_utf8 = False
+                if self.drv_name in ("LIBTDSODBC.SO",):
+                    self.driver_needs_utf8 = True
+
 
             # http://msdn.microsoft.com/en-us/library/ms131686.aspx
             if self.MARS_Connection and ms_drv_names.match(self.drv_name):
@@ -350,6 +354,7 @@ class CursorWrapper(object):
             # yet, so we need to encode the SQL clause itself in utf-8
             sql = sql.encode('utf-8')
 
+
         # pyodbc uses '?' instead of '%s' as parameter placeholder.
         if n_params is not None and n_params > 0:
             sql = sql % tuple('?' * n_params)
@@ -361,25 +366,35 @@ class CursorWrapper(object):
     def format_params(self, params):
         fp = []
         for p in params:
-            if isinstance(p, text_type):
-                if self.driver_needs_utf8:
-                    # FreeTDS (and other ODBC drivers?) doesn't support Unicode
-                    # yet, so we need to encode parameters in utf-8
-                    fp.append(p.encode('utf-8'))
-                else:
+            if self.connection.drv_name in ("LIBTDSODBC.SO",):
+                if isinstance(p, text_type):
+                    if self.driver_needs_utf8:
+                        # FreeTDS (and other ODBC drivers?) doesn't support Unicode
+                        # yet, so we need to encode parameters in utf-8
+                        fp.append(p.encode('utf-8'))
+                    else:
+                        fp.append(p)
+
+                elif isinstance(p, binary_type):
                     fp.append(p)
 
-            elif isinstance(p, binary_type):
-                fp.append(p)
+                elif isinstance(p, type(True)):
+                    if p:
+                        fp.append(1)
+                    else:
+                        fp.append(0)
 
-            elif isinstance(p, type(True)):
-                if p:
-                    fp.append(1)
                 else:
-                    fp.append(0)
-
+                    fp.append(p)
             else:
-                fp.append(p)
+                if isinstance(p, type(True)):
+                    if p:
+                        fp.append(1)
+                    else:
+                        fp.append(0)
+
+                else:
+                    fp.append(p)
 
         return tuple(fp)
 
