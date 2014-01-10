@@ -1,5 +1,5 @@
 from django.db.models.sql import compiler
-                                            
+
 from sql_server.pyodbc.compat import zip_longest
 
 
@@ -75,13 +75,13 @@ class SQLCompiler(compiler.SQLCompiler):
                 if not pk in out_cols:
                     ordering = [self.connection.ops.random_function_sql()]
                 # XXX: Maybe use group_by field for ordering?
-                #if self.group_by:
-                    #ordering = ['%s.%s ASC' % (qn(self.group_by[0][0]),qn(self.group_by[0][1]))]
+                # if self.group_by:
+                    # ordering = ['%s.%s ASC' % (qn(self.group_by[0][0]),qn(self.group_by[0][1]))]
                 else:
                     ordering = ['%s ASC' % pk]
             if not supports_offset_clause:
                 order = ', '.join(ordering)
-                self.query.ordering_aliases.append('(ROW_NUMBER() OVER (ORDER BY %s)) AS [rn]' % order)
+                self.ordering_aliases.append('(ROW_NUMBER() OVER (ORDER BY %s)) AS [rn]' % order)
                 ordering = self.connection.ops.force_no_ordering()
         elif do_limit:
             result.append('TOP %d' % high_mark)
@@ -98,7 +98,7 @@ class SQLCompiler(compiler.SQLCompiler):
             result.append('WHERE %s' % where)
             params.extend(w_params)
         if self.connection._DJANGO_VERSION >= 15:
-            grouping, gb_params = self.get_grouping(having_group_by,ordering_group_by)
+            grouping, gb_params = self.get_grouping(having_group_by, ordering_group_by)
         # elif self.connection._DJANGO_VERSION == 15:
         #     grouping, gb_params = self.get_grouping(ordering_group_by)
         else:
@@ -135,9 +135,9 @@ class SQLCompiler(compiler.SQLCompiler):
             result = ['SELECT * FROM (%s) AS X WHERE X.rn' % ' '.join(result)]
             # Place WHERE condition on `rn` for the desired range.
             if do_limit:
-                result.append('BETWEEN %d AND %d' % (low_mark+1, high_mark))
+                result.append('BETWEEN %d AND %d' % (low_mark + 1, high_mark))
             else:
-                result.append('>= %d' % (low_mark+1))
+                result.append('>= %d' % (low_mark + 1))
             result.append('ORDER BY X.rn')
 
         # Finally do cleanup - get rid of the joins we created above.
@@ -235,7 +235,7 @@ class SQLInsertCompiler(compiler.SQLInsertCompiler, SQLCompiler):
 
         has_fields = bool(self.query.fields)
         if has_fields:
-            fields = self.query.fields 
+            fields = self.query.fields
         else:
             fields = [opts.pk]
         columns = [f.column for f in fields]
@@ -261,7 +261,7 @@ class SQLInsertCompiler(compiler.SQLInsertCompiler, SQLCompiler):
                             sql = 'SET NOCOUNT ON '
                         sql += "INSERT INTO %s DEFAULT VALUES" % quoted_table
                     else:
-                        sql = "SET IDENTITY_INSERT %s ON;\n%s;\nSET IDENTITY_INSERT %s OFF"% \
+                        sql = "SET IDENTITY_INSERT %s ON;\n%s;\nSET IDENTITY_INSERT %s OFF" % \
                             (quoted_table, sql, quoted_table)
                 out.append([sql, params])
             items = out
