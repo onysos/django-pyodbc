@@ -11,7 +11,7 @@ Microsoft SQL Server and Azure SQL Database.
 Features
 --------
 
--  Supports Django 1.2, 1.3, 1.4, 1.5
+-  Supports Django 1.6
 -  Supports Microsoft SQL Server 2005, 2008/2008R2, 2012, 2014 and
    Azure SQL Database
 -  Supports LIMIT+OFFSET and offset w/o LIMIT emulation.
@@ -22,8 +22,8 @@ Features
 Dependencies
 ------------
 
--  Django 1.2/1.3/1.4/1.5
--  pyodbc 2.1 or newer
+-  Django 1.6
+-  pyodbc 3.0 or newer
 
 Installation
 ------------
@@ -32,7 +32,7 @@ Installation
 
 2. Install django-pyodbc-azure ::
 
-    pip install "django-pyodbc-azure<1.1"
+    pip install django-pyodbc-azure
 
 3. Now you can point the ``ENGINE`` setting in the settings file used by
    your Django application or project to the ``'sql_server.pyodbc'``
@@ -76,6 +76,11 @@ Standard Django settings
 
    String. Database user password.
 
+-  AUTOCOMMIT
+
+   Boolean. Set this to False if you want to disable
+   Django's transaction management and implement your own.
+
 -  TEST_NAME
 
    String. The name of database to use when running the test suite.
@@ -110,11 +115,6 @@ OPTIONS
 ~~~~~~~
 
 Dictionary. Current available keys are:
-
--  autocommit
-
-   Boolean. Indicates if pyodbc should direct the ODBC driver to
-   activate the autocommit feature. Default value is ``False``.
 
 -  MARS_Connection
 
@@ -205,6 +205,15 @@ Here is an example of the database settings:
     
     # set this to False if you want to turn off pyodbc's connection pooling
     DATABASE_CONNECTION_POOLING = False
+
+Notice
+------
+
+This version of *django-pyodbc-azure* only supports Django 1.6.
+Specify the old version (1.0.x) at installation if you want to use it
+on Django 1.5 or earlier: ::
+
+    pip install "django-pyodbc-azure<1.1"
 
 License
 -------
