@@ -408,35 +408,25 @@ class CursorWrapper(object):
     def format_params(self, params):
         fp = []
         for p in params:
-            if not self.connection.drv_name in ("LIBTDSODBC.SO",):
-                if isinstance(p, text_type):
-                    if self.driver_needs_utf8:
-                        # FreeTDS (and other ODBC drivers?) doesn't support Unicode
-                        # yet, so we need to encode parameters in utf-8
-                        fp.append(p.encode('utf-8'))
-                    else:
-                        fp.append(p)
-
-                elif isinstance(p, binary_type):
-                    fp.append(p)
-
-                elif isinstance(p, type(True)):
-                    if p:
-                        fp.append(1)
-                    else:
-                        fp.append(0)
-
+            if isinstance(p, text_type):
+                if self.driver_needs_utf8:
+                    # FreeTDS (and other ODBC drivers?) doesn't support Unicode
+                    # yet, so we need to encode parameters in utf-8
+                    fp.append(smart_str(p, 'utf-8'))
                 else:
                     fp.append(p)
+
+            elif isinstance(p, binary_type):
+                fp.append(p)
+
+            elif isinstance(p, type(True)):
+                if p:
+                    fp.append(1)
+                else:
+                    fp.append(0)
+
             else:
-                if isinstance(p, type(True)):
-                    if p:
-                        fp.append(1)
-                    else:
-                        fp.append(0)
-
-                else:
-                    fp.append(p)
+                fp.append(p)
 
         return tuple(fp)
 
