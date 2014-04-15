@@ -22,8 +22,9 @@ from django.db import utils
 from django.db.backends import BaseDatabaseWrapper, BaseDatabaseFeatures, BaseDatabaseValidation
 from django.db.backends.signals import connection_created
 from django.conf import settings
+from django.utils.encoding import smart_str
 from django import VERSION as DjangoVersion
-if DjangoVersion[:2] >= (1, 5):
+if DjangoVersion[:2] == (1,5):
     _DJANGO_VERSION = 15
 elif DjangoVersion[:2] == (1, 4):
     _DJANGO_VERSION = 14
@@ -52,6 +53,8 @@ class DatabaseFeatures(BaseDatabaseFeatures):
     can_return_id_from_insert = True
     can_use_chunked_reads = False
     has_bulk_insert = True
+    has_select_for_update = _DJANGO_VERSION >= 14
+    has_select_for_update_nowait = _DJANGO_VERSION >= 14
     ignores_nulls_in_unique_constraints = False
     supports_1000_query_parameters = False
     supports_microsecond_precision = True
@@ -354,7 +357,7 @@ class CursorWrapper(object):
         if self.driver_needs_utf8 and isinstance(sql, text_type):
             # FreeTDS (and other ODBC drivers?) doesn't support Unicode
             # yet, so we need to encode the SQL clause itself in utf-8
-            sql = sql.encode('utf-8')
+            sql = smart_str(sql, 'utf-8')
 
 
         # pyodbc uses '?' instead of '%s' as parameter placeholder.

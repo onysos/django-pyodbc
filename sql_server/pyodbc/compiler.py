@@ -1,5 +1,5 @@
 from django.db.models.sql import compiler
-
+from sql_server.pyodbc.aggregates import AggregateWrapper
 from sql_server.pyodbc.compat import zip_longest
 
 
@@ -25,6 +25,8 @@ class SQLCompiler(compiler.SQLCompiler):
         if with_limits and self.query.low_mark == self.query.high_mark:
             return '', ()
 
+        self._wrap_aggregates()
+
         self.pre_sql_setup()
 
         # The do_offset flag indicates whether we need to construct
@@ -35,6 +37,7 @@ class SQLCompiler(compiler.SQLCompiler):
         do_offset = with_limits and low_mark != 0
         # SQL Server 2012 or newer supports OFFSET/FETCH clause
         supports_offset_clause = self.connection.ops.sql_server_ver >= 2012
+        do_offset_emulation = do_offset and not supports_offset_clause
 
         # After executing the query, we must get rid of any joins the query
         # setup created. So, take note of alias counts before the query ran.
@@ -43,10 +46,9 @@ class SQLCompiler(compiler.SQLCompiler):
         # another run of it.
         if self.connection._DJANGO_VERSION >= 14:
             self.refcounts_before = self.query.alias_refcount.copy()
-        # out_cols = self.get_columns(with_col_aliases)
-        out_cols, s_params = self.get_columns(with_col_aliases)
+        out_cols = self.get_columns(with_col_aliases or do_offset_emulation)
         ordering, ordering_group_by, offset_params = \
-            self._get_ordering(out_cols, supports_offset_clause or not do_offset)
+            self._get_ordering(out_cols, not do_offset_emulation)
 
         # This must come after 'select' and 'ordering' -- see docstring of
         # get_from_clause() for details.
@@ -79,7 +81,7 @@ class SQLCompiler(compiler.SQLCompiler):
                     # ordering = ['%s.%s ASC' % (qn(self.group_by[0][0]),qn(self.group_by[0][1]))]
                 else:
                     ordering = ['%s ASC' % pk]
-            if not supports_offset_clause:
+            if do_offset_emulation:
                 order = ', '.join(ordering)
                 self.ordering_aliases.append('(ROW_NUMBER() OVER (ORDER BY %s)) AS [rn]' % order)
                 ordering = self.connection.ops.force_no_ordering()
@@ -93,6 +95,12 @@ class SQLCompiler(compiler.SQLCompiler):
         result.append('FROM')
         result.extend(from_)
         params.extend(f_params)
+
+        if self.connection.features.has_select_for_update and self.query.select_for_update:
+            # If we've been asked for a NOWAIT query but the backend does not support it,
+            # raise a DatabaseError otherwise we could get an unexpected deadlock.
+            nowait = self.query.select_for_update_nowait
+            result.append(self.connection.ops.for_update_sql(nowait=nowait))
 
         if where:
             result.append('WHERE %s' % where)
@@ -124,12 +132,12 @@ class SQLCompiler(compiler.SQLCompiler):
 
         if ordering and not with_col_aliases:
             result.append('ORDER BY %s' % ', '.join(ordering))
-            if do_offset and supports_offset_clause:
+            if do_offset and not do_offset_emulation:
                 result.append('OFFSET %d ROWS' % low_mark)
                 if do_limit:
                     result.append('FETCH FIRST %d ROWS ONLY' % (high_mark - low_mark))
 
-        if do_offset and not supports_offset_clause:
+        if do_offset_emulation:
             # Construct the final SQL clause, using the initial select SQL
             # obtained above.
             result = ['SELECT * FROM (%s) AS X WHERE X.rn' % ' '.join(result)]
@@ -172,6 +180,11 @@ class SQLCompiler(compiler.SQLCompiler):
                     offset_params.extend(ex[1])
         return ordering, grouping, offset_params
 
+    def _wrap_aggregates(self):
+        for alias, aggregate in self.query.aggregate_select.items():
+            self.query.aggregate_select[alias] = AggregateWrapper(aggregate)
+
+
 class SQLInsertCompiler(compiler.SQLInsertCompiler, SQLCompiler):
 
     def as_sql_legacy(self):
@@ -210,11 +223,11 @@ class SQLInsertCompiler(compiler.SQLInsertCompiler, SQLCompiler):
                         sql = 'SET NOCOUNT ON '
                     sql += "INSERT INTO %s DEFAULT VALUES" % quoted_table
                 else:
-                    sql = "SET IDENTITY_INSERT %s ON;\n%s;\nSET IDENTITY_INSERT %s OFF" % \
+                    sql = "SET IDENTITY_INSERT %s ON; %s; SET IDENTITY_INSERT %s OFF" % \
                         (quoted_table, sql, quoted_table)
 
         if returns_id:
-            sql += ';\nSELECT CAST(SCOPE_IDENTITY() AS BIGINT)'
+            sql += '; SELECT CAST(SCOPE_IDENTITY() AS BIGINT)'
 
         return sql, params
 
@@ -261,13 +274,13 @@ class SQLInsertCompiler(compiler.SQLInsertCompiler, SQLCompiler):
                             sql = 'SET NOCOUNT ON '
                         sql += "INSERT INTO %s DEFAULT VALUES" % quoted_table
                     else:
-                        sql = "SET IDENTITY_INSERT %s ON;\n%s;\nSET IDENTITY_INSERT %s OFF" % \
+                        sql = "SET IDENTITY_INSERT %s ON; %s; SET IDENTITY_INSERT %s OFF"% \
                             (quoted_table, sql, quoted_table)
                 out.append([sql, params])
             items = out
 
         if returns_id:
-            items = [[x[0] + ';\nSELECT CAST(SCOPE_IDENTITY() AS BIGINT)', x[1]] for x in items]
+            items = [[x[0] + '; SELECT CAST(SCOPE_IDENTITY() AS BIGINT)', x[1]] for x in items]
 
         return items
 
@@ -276,10 +289,16 @@ class SQLDeleteCompiler(compiler.SQLDeleteCompiler, SQLCompiler):
     pass
 
 class SQLUpdateCompiler(compiler.SQLUpdateCompiler, SQLCompiler):
-    pass
+    def as_sql(self):
+        sql, params = super(SQLUpdateCompiler, self).as_sql()
+        if sql:
+            sql = '; '.join(['SET NOCOUNT OFF', sql])
+        return sql, params
 
 class SQLAggregateCompiler(compiler.SQLAggregateCompiler, SQLCompiler):
-    pass
+    def as_sql(self, qn=None):
+        self._wrap_aggregates()
+        return super(SQLAggregateCompiler, self).as_sql(qn=qn)
 
 class SQLDateCompiler(compiler.SQLDateCompiler, SQLCompiler):
     pass

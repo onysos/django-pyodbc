@@ -1,6 +1,7 @@
-#!/usr/bin/env python
-
-from distutils.core import setup
+try:
+    from setuptools import setup
+except ImportError:
+    from distutils.core import setup
 
 CLASSIFIERS=[
     'Development Status :: 4 - Beta',
@@ -20,12 +21,17 @@ CLASSIFIERS=[
 
 setup(
     name='django-pyodbc-azure',
-    version='1.0.8',
-    description='Django backend for MS SQL Server and Windows Azure SQL Database using pyodbc',
+    version='1.0.12',
+    description='Django backend for Microsoft SQL Server and Azure SQL Database using pyodbc',
     long_description=open('README.rst').read(),
     author='Michiya Takahashi',
     url='https://github.com/michiya/django-pyodbc-azure',
     license='BSD',
     packages=['sql_server', 'sql_server.pyodbc', 'sql_server.extra'],
+    install_requires=[
+        'Django>=1.2,<1.6',
+        'pyodbc>=2.1',
+    ],
     classifiers=CLASSIFIERS,
+    keywords='azure django',
 )

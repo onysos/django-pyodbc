@@ -3,36 +3,36 @@ django-pyodbc-azure
 
 *django-pyodbc-azure* is a refined fork of
 `django-pyodbc <https://github.com/avidal/django-pyodbc>`__, a
-`Django <http://djangoproject.com/>`__ MS SQL Server external DB backend
-that uses ODBC by employing the
-`pyodbc <https://code.google.com/p/pyodbc/>`__ library. It supports MS
-SQL Server and Windows Azure SQL Database.
+`Django <http://djangoproject.com/>`__ Microsoft SQL Server external
+DB backend that uses ODBC by employing the
+`pyodbc <https://code.google.com/p/pyodbc/>`__ library. It supports
+Microsoft SQL Server and Azure SQL Database.
 
 Features
 --------
 
 -  Supports Django 1.2, 1.3, 1.4, 1.5
--  Supports MS SQL Server 2005, 2008/2008R2, 2012, and Windows Azure SQL
-   Database
+-  Supports Microsoft SQL Server 2005, 2008/2008R2, 2012, 2014 and
+   Azure SQL Database
 -  Supports LIMIT+OFFSET and offset w/o LIMIT emulation.
 -  Passes most of the tests of the Django test suite.
--  Compatible with *SQL Server* and *SQL Server Native Client* (Windows),
-   *Micosoft ODBC Driver for SQL Server* and *FreeTDS* (Linux) ODBC drivers.
+-  Compatible with *SQL Server* , *SQL Server Native Client* ,
+   *Micosoft ODBC Driver 11 for SQL Server* and *FreeTDS* ODBC drivers.
 
 Dependencies
 ------------
 
--  Django 1.2 or newer
+-  Django 1.2/1.3/1.4/1.5
 -  pyodbc 2.1 or newer
 
 Installation
 ------------
 
-1. Install pyodbc
+1. Install pyodbc and Django
 
 2. Install django-pyodbc-azure ::
 
-    pip install django-pyodbc-azure
+    pip install "django-pyodbc-azure<1.1"
 
 3. Now you can point the ``ENGINE`` setting in the settings file used by
    your Django application or project to the ``'sql_server.pyodbc'``
@@ -59,7 +59,7 @@ Standard Django settings
 -  HOST
 
    String. SQL Server instance in ``"server\instance"`` (on-premise) or
-   ``"server.database.windows.net"`` (Windows Azure SQL Database) format.
+   ``"server.database.windows.net"`` (Azure SQL Database) format.
 
 -  PORT
 
@@ -69,7 +69,7 @@ Standard Django settings
 -  USER
 
    String. Database user name in ``"user"`` (on-premise) or
-   ``"user@server"`` (Windows Azure SQL Database) format.
+   ``"user@server"`` (Azure SQL Database) format.
    If not given then MS Integrated Security will be used.
 
 -  PASSWORD
@@ -93,7 +93,7 @@ Standard Django settings
    Boolean. If it is set to ``False``, the test database won’t be
    automatically created at the beginning of the tests and dropped at the end.
    This is useful not to be charged too much for creating new databases
-   in every test when you run tests with Windows Azure SQL Database.
+   in every test when you run tests with Azure SQL Database.
 
 -  TEST_DEPENDENCIES
 
@@ -206,28 +206,13 @@ Here is an example of the database settings:
     # set this to False if you want to turn off pyodbc's connection pooling
     DATABASE_CONNECTION_POOLING = False
 
-Utilities
----------
-
-backend-specific aggregation classes
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-A couple of aggregation classes specific to SQL Server
-(``Avg``, ``StdDev``, ``Variance``) are bundled with the backend.
-Instead of Django's standard ones, you can use them like this: ::
-
-   from sql_server.pyodbc.aggregates import Avg
-
-   vals = Book.objects.aggregate(Avg('price'))
-
-And you can use Django's standard classes for other aggregating operations.
-
 License
-=======
+-------
 
 New BSD LICENSE
 
 Credits
-=======
+-------
 
 -  `Ramiro Morales <https://people.djangoproject.com/ramiro/>`__
 -  `Filip Wasilewski <http://code.djangoproject.com/ticket/5246>`__
