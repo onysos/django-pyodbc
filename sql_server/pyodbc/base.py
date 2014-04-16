@@ -25,7 +25,7 @@ from django.utils.functional import cached_property
 from django.utils.six import binary_type, text_type
 from django.utils.timezone import utc
 from django import VERSION as DjangoVersion
-if DjangoVersion[:2] == (1,6):
+if DjangoVersion[:2] == (1, 6):
     _DJANGO_VERSION = 16
 else:
     raise ImproperlyConfigured("Django %d.%d is not supported." % DjangoVersion[:2])
@@ -222,7 +222,7 @@ class DatabaseWrapper(BaseDatabaseWrapper):
 
         if self.supports_mars:
             cstr_parts.append('MARS_Connection=yes')
-                
+
         if options.get('extra_params', None):
             cstr_parts.append(options['extra_params'])
 
@@ -409,7 +409,7 @@ class CursorWrapper(object):
         fp = []
         for p in params:
             if isinstance(p, text_type):
-                if self.driver_needs_utf8:
+                if self.driver_needs_utf8 and False:
                     # FreeTDS (and other ODBC drivers?) doesn't support Unicode
                     # yet, so we need to encode parameters in utf-8
                     fp.append(smart_str(p, 'utf-8'))
