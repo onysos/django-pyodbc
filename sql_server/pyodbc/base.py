@@ -473,7 +473,10 @@ class CursorWrapper(object):
                 # FreeTDS (and other ODBC drivers?) doesn't support Unicode
                 # yet, so we need to decode utf-8 data coming from the DB
                 if isinstance(f, binary_type):
-                    row[i] = f.decode('utf-8')
+                    try:
+                        row[i] = f.decode('utf-8')
+                    except UnicodeDecodeError:
+                        row[i] = f.decode('latin1')
 
         return row
 
