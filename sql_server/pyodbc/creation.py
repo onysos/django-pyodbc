@@ -29,6 +29,7 @@ class DatabaseCreation(BaseDatabaseCreation):
         'BinaryField':       'varbinary(max)',
         'BooleanField':      'bit',
         'CharField':         'nvarchar(%(max_length)s)',
+        'FixedCharField':         'nvarchar(%(max_length)s)',
         'CommaSeparatedIntegerField': 'nvarchar(%(max_length)s)',
         'DateField':         'date',
         'DateTimeField':     'datetime2',
@@ -41,8 +42,8 @@ class DatabaseCreation(BaseDatabaseCreation):
         'GenericIPAddressField': 'nvarchar(39)',
         'NullBooleanField':  'bit',
         'OneToOneField':     'int',
-        #'PositiveIntegerField': 'integer CONSTRAINT [CK_int_pos_%(column)s] CHECK ([%(column)s] >= 0)',
-        #'PositiveSmallIntegerField': 'smallint CONSTRAINT [CK_smallint_pos_%(column)s] CHECK ([%(column)s] >= 0)',
+        # 'PositiveIntegerField': 'integer CONSTRAINT [CK_int_pos_%(column)s] CHECK ([%(column)s] >= 0)',
+        # 'PositiveSmallIntegerField': 'smallint CONSTRAINT [CK_smallint_pos_%(column)s] CHECK ([%(column)s] >= 0)',
         'SlugField':         'nvarchar(%(max_length)s)',
         'SmallIntegerField': 'smallint',
         'TextField':         'nvarchar(max)',
@@ -84,7 +85,7 @@ class DatabaseCreation(BaseDatabaseCreation):
         if self.connection.to_azure_sql_db:
             self.connection.close()
             settings_dict["NAME"] = 'master'
-            
+
         return super(DatabaseCreation, self)._create_test_db(verbosity, autoclobber)
 
     def _destroy_test_db(self, test_database_name, verbosity):
@@ -95,7 +96,7 @@ class DatabaseCreation(BaseDatabaseCreation):
                 self.connection.settings_dict["NAME"] = 'master'
             cursor = self.connection.cursor()
             self.connection.set_autocommit(True)
-            #time.sleep(1) # To avoid "database is being accessed by other users" errors.
+            # time.sleep(1) # To avoid "database is being accessed by other users" errors.
             if not self.connection.to_azure_sql_db:
                 cursor.execute("ALTER DATABASE %s SET SINGLE_USER WITH ROLLBACK IMMEDIATE " % \
                         self.connection.ops.quote_name(test_database_name))
