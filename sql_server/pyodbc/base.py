@@ -113,6 +113,7 @@ class DatabaseWrapper(BaseDatabaseWrapper):
         # However, recent versions of FreeTDS and pyodbc (0.91 and 3.0.6 as
         # of writing) are perfectly okay being fed unicode, which is why
         # this option is configurable.
+        self.secondary_encoding = opts.get("SECONDARY_ENCODING", 'cp1252')
         self.driver_needs_utf8 = opts.get('driver_needs_utf8', False)
 
         # data type compatibility to databases created by old django-pyodbc
@@ -228,6 +229,7 @@ class DatabaseWrapper(BaseDatabaseWrapper):
 
         connstr = ';'.join(cstr_parts)
         unicode_results = options.get('unicode_results', False)
+
 
         conn = Database.connect(connstr, unicode_results=unicode_results)
 
@@ -476,7 +478,7 @@ class CursorWrapper(object):
                     try:
                         row[i] = f.decode('utf-8')
                     except UnicodeDecodeError:
-                        row[i] = f.decode('latin1')
+                        row[i] = f.decode(self.connection.secondary_encoding)
 
         return row
 
